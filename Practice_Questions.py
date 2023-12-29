@@ -1,10 +1,7 @@
 import streamlit as st
-import mysql.connector
-from mysql.connector import Error
-import random
+from io import BytesIO
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from io import BytesIO
 
 # Streamlit UI
 st.title("Practice Question Generator")
@@ -12,12 +9,8 @@ st.title("Practice Question Generator")
 # Connect to the MySQL database
 try:
     db_config = st.secrets["mysql"]
-    conn = mysql.connector.connect(
-        host=db_config["host"],
-        database=db_config["database"],
-        user=db_config["user"],
-        password=db_config["password"]
-    )
+    conn = st.connection(type='mysql', host=db_config["host"], database=db_config["database"],
+                         user=db_config["user"], password=db_config["password"])
 
     if conn.is_connected():
         cursor = conn.cursor()
@@ -127,7 +120,8 @@ try:
 
         # Generate questions based on user input
         selected_questions = select_ordered_questions_from_database(
-            num_questions, difficulty=difficulty, subject_name=subject_name, question_type=question_types, importance=importance)
+            num_questions, difficulty=difficulty, subject_name=subject_name, question_type=question_types,
+            importance=importance)
 
         # Display the generated questions
         if selected_questions:

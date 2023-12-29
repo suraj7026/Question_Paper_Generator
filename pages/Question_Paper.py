@@ -1,10 +1,4 @@
 import streamlit as st
-import mysql.connector
-from mysql.connector import Error
-import random
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from io import BytesIO
 
 class Question:
     def __init__(self, qid, question, importance, difficulty, subject_name, topic, question_type):
@@ -145,13 +139,8 @@ st.title("Practice Question Paper Generator")
 
 # Connect to the MySQL database
 try:
-    db_config = st.secrets["mysql"]
-    conn = mysql.connector.connect(
-        host=db_config["host"],
-        database=db_config["database"],
-        user=db_config["user"],
-        password=db_config["password"]
-    )
+    conn = st.connection(type='mysql', host=db_config["host"], database=db_config["database"],
+                         user=db_config["user"], password=db_config["password"])
 
     if conn.is_connected():
         cursor = conn.cursor()
@@ -198,4 +187,4 @@ finally:
         cursor.close()
         conn.close()
 
-# Run the Streamlit app
+
