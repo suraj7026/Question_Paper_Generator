@@ -21,11 +21,12 @@ st.title("Add Questions")
 
 # Connect to the MySQL database
 try:
+    db_config = st.secrets["mysql"]
     conn = mysql.connector.connect(
-        host='localhost',
-        database='question_bank',
-        user='root',
-        password='@Suraj2308'
+        host=db_config["host"],
+        database=db_config["database"],
+        user=db_config["user"],
+        password=db_config["password"]
     )
 
     if conn.is_connected():

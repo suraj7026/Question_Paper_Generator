@@ -17,7 +17,6 @@ class Question:
         self.question_type = question_type
 
 
-#
 def fetch_questions_from_database(importance=None, mark=None, difficulty=None, subject_name=None, topic=None, question_type=None):
     query = "SELECT * FROM questions WHERE "
     conditions = []
@@ -141,17 +140,17 @@ def generate_pdf(subject_name, questions):
     return buffer
 
 
-
 # Streamlit UI
 st.title("Practice Question Paper Generator")
 
 # Connect to the MySQL database
 try:
+    db_config = st.secrets["mysql"]
     conn = mysql.connector.connect(
-        host='localhost',
-        database='question_bank',
-        user='root',
-        password='@Suraj2308'
+        host=db_config["host"],
+        database=db_config["database"],
+        user=db_config["user"],
+        password=db_config["password"]
     )
 
     if conn.is_connected():
@@ -186,7 +185,6 @@ try:
                 label="Download Questions as PDF", data=pdf_buffer, file_name="generated_questions.pdf",
                 key="pdf_button"
             )
-
 
         else:
             st.warning("No matching questions found.")

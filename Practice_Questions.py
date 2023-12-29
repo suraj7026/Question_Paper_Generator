@@ -6,102 +6,97 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from io import BytesIO
 
-
-class Question:
-    def __init__(self, question, importance, difficulty, subject_name, topic, question_type):
-
-        self.question = question
-        self.importance = importance
-        self.difficulty = difficulty
-        self.subject_name = subject_name
-        self.topic = topic
-        self.question_type = question_type
-
-
-def fetch_questions_from_database(importance=None, mark=None, difficulty=None, subject_name=None, topic=None, question_type=None):
-    query = "SELECT * FROM questions WHERE "
-    conditions = []
-
-    if importance:
-        conditions.append(f"importance = '{importance}'")
-    if topic:
-        conditions.append(f"topic = '{topic}'")
-    if difficulty:
-        difficulty_conditions = [f"difficulty = '{d}'" for d in difficulty]
-        conditions.append("(" + " OR ".join(difficulty_conditions) + ")")
-    if subject_name:
-        conditions.append(f"subject_name = '{subject_name}'")
-    if mark:
-        conditions.append(f"mark = '{mark}'")
-    if question_type:
-        question_type_conditions = [f"question_type = '{qtype}'" for qtype in question_type]
-        conditions.append("(" + " OR ".join(question_type_conditions) + ")")
-
-    query += " AND ".join(conditions)
-
-    cursor.execute(query)
-    result = cursor.fetchall()
-
-    # Convert the result to a list of Question objects
-    questions = [Question(*row) for row in result]
-
-    return questions
-
-
-def select_ordered_questions_from_database(n, importance=None, mark=None, difficulty=None, subject_name=None, topic=None, question_type=None):
-    questions = fetch_questions_from_database(
-        importance, mark, difficulty, subject_name, topic, question_type)
-
-    if not questions:
-        return None  # No matching questions found
-
-    # Sort questions by type (MCQ, One Marks, Descriptive)
-    sorted_questions = sorted(questions, key=lambda q: q.question_type)
-
-    # Check if n is greater than the total number of questions
-    if n > len(sorted_questions):
-        st.warning("Requested number of questions exceeds available questions. Adjusting to the maximum available.")
-        n = len(sorted_questions)
-
-    # Select n random questions
-    selected_questions = random.sample(sorted_questions, n)
-
-    return selected_questions
-
-
-def generate_pdf(questions):
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
-    c.setFont("Helvetica", 12)
-
-    for i, question in enumerate(questions, start=1):
-        c.drawString(10, 750 - i * 12, f" {i}: {question.question}")
-
-    c.save()
-
-    buffer.seek(0)
-    return buffer
-
-
 # Streamlit UI
 st.title("Practice Question Generator")
 
 # Connect to the MySQL database
 try:
+    db_config = st.secrets["mysql"]
     conn = mysql.connector.connect(
-        host='localhost',
-        database='question_bank',
-        user='root',
-        password='@Suraj2308'
+        host=db_config["host"],
+        database=db_config["database"],
+        user=db_config["user"],
+        password=db_config["password"]
     )
 
     if conn.is_connected():
         cursor = conn.cursor()
 
-        # User input for generating questions
+        class Question:
+            def __init__(self, question, importance, difficulty, subject_name, topic, question_type):
+                self.question = question
+                self.importance = importance
+                self.difficulty = difficulty
+                self.subject_name = subject_name
+                self.topic = topic
+                self.question_type = question_type
 
-        num_questions = st.slider(
-            "Select the number of questions", 1, 40, 5)
+        def fetch_questions_from_database(importance=None, mark=None, difficulty=None, subject_name=None, topic=None,
+                                          question_type=None):
+            query = "SELECT * FROM questions WHERE "
+            conditions = []
+
+            if importance:
+                conditions.append(f"importance = '{importance}'")
+            if topic:
+                conditions.append(f"topic = '{topic}'")
+            if difficulty:
+                difficulty_conditions = [f"difficulty = '{d}'" for d in difficulty]
+                conditions.append("(" + " OR ".join(difficulty_conditions) + ")")
+            if subject_name:
+                conditions.append(f"subject_name = '{subject_name}'")
+            if mark:
+                conditions.append(f"mark = '{mark}'")
+            if question_type:
+                question_type_conditions = [f"question_type = '{qtype}'" for qtype in question_type]
+                conditions.append("(" + " OR ".join(question_type_conditions) + ")")
+
+            query += " AND ".join(conditions)
+
+            cursor.execute(query)
+            result = cursor.fetchall()
+
+            # Convert the result to a list of Question objects
+            questions = [Question(*row) for row in result]
+
+            return questions
+
+        def select_ordered_questions_from_database(n, importance=None, mark=None, difficulty=None, subject_name=None,
+                                                   topic=None, question_type=None):
+            questions = fetch_questions_from_database(
+                importance, mark, difficulty, subject_name, topic, question_type)
+
+            if not questions:
+                return None  # No matching questions found
+
+            # Sort questions by type (MCQ, One Marks, Descriptive)
+            sorted_questions = sorted(questions, key=lambda q: q.question_type)
+
+            # Check if n is greater than the total number of questions
+            if n > len(sorted_questions):
+                st.warning("Requested number of questions exceeds available questions. Adjusting to the maximum available.")
+                n = len(sorted_questions)
+
+            # Select n random questions
+            selected_questions = random.sample(sorted_questions, n)
+
+            return selected_questions
+
+        def generate_pdf(questions):
+            buffer = BytesIO()
+            c = canvas.Canvas(buffer, pagesize=letter)
+            c.setFont("Helvetica", 12)
+
+            for i, question in enumerate(questions, start=1):
+                c.drawString(10, 750 - i * 12, f" {i}: {question.question}")
+
+            c.save()
+
+            buffer.seek(0)
+            return buffer
+
+        # User input for generating questions
+        num_questions = st.slider("Select the number of questions", 1, 40, 5)
         subject_name = st.selectbox(
             "Select the subject", ["Mathematics", "Physics", "Chemistry", "Computer Science", "Biology"])
         difficulty = st.multiselect(
@@ -128,8 +123,7 @@ try:
         else:
             st.warning("Invalid subject selected")
 
-        importance = st.selectbox(
-            "Select the importance", ["High", "Medium", "Low"], index=1)  # Default to "Medium"
+        importance = st.selectbox("Select the importance", ["High", "Medium", "Low"], index=1)  # Default to "Medium"
 
         # Generate questions based on user input
         selected_questions = select_ordered_questions_from_database(
@@ -158,5 +152,3 @@ finally:
     if conn.is_connected():
         cursor.close()
         conn.close()
-
-# Run the Streamlit app
